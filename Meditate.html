@@ -11,7 +11,7 @@
             padding: 0;
             font-family: 'Helvetica Neue', Arial, sans-serif;
         }
-        
+
         .timer-container {
             position: absolute;
             top: 963px;
@@ -27,7 +27,7 @@
             padding: 10px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
-        
+
         .timer-display {
             font-size: 3em;
             font-weight: 300;
@@ -39,13 +39,13 @@
             height: auto;
             overflow: hidden;
         }
-        
+
         .timer-display.hidden {
             opacity: 0;
             height: 0;
             margin: 0;
         }
-        
+
         .timer-controls {
             display: flex;
             align-items: center;
@@ -56,13 +56,19 @@
             height: auto;
             overflow: hidden;
         }
-        
+
         .timer-controls.hidden {
             opacity: 0;
             height: 0;
             margin: 0;
         }
-        
+
+        .hidden {
+            opacity: 0;
+            height: 0;
+            margin: 0;
+        }
+
         .timer-input {
             width: 60px;
             height: 36px;
@@ -74,18 +80,18 @@
             padding: 0 4px;
             background-color: #f5f5f5;
         }
-        
+
         .timer-input:focus {
             outline: none;
             border-color: #fd8e07d4;
         }
-        
+
         .timer-separator {
             font-size: 24px;
             color: #9E9E9E;
             margin: 0 2px;
         }
-        
+
         .timer-button {
             background-color: #fd8f07;
             color: white;
@@ -96,11 +102,11 @@
             cursor: pointer;
             transition: background-color 0.3s ease;
         }
-        
+
         .timer-button:hover {
             background-color: #fd8e07df;
         }
-        
+
         .timer-button.reset {
             background-color: transparent;
             color: #9E9E9E;
@@ -109,9 +115,12 @@
             border: 1px solid #E0E0E0;
             margin-left: 8px;
         }
-        
+
         .timer-button.reset:hover {
             background-color: #F5F5F5;
+        }
+        .text-orange {
+            color: #fd8f07;
         }
     </style>
 </head>
@@ -137,6 +146,8 @@
     </svg>
 
     <div class="timer-container">
+        <p class="text-orange" id="title">Please Input the time to Start</p>
+
         <div id="timer" class="timer-display hidden">00:00</div>
         <div id="timerControls" class="timer-controls">
             <input type="number" id="minutes" class="timer-input" placeholder="00" min="0" max="59">
@@ -144,90 +155,145 @@
             <input type="number" id="seconds" class="timer-input" placeholder="00" min="0" max="59">
         </div>
         <div>
-            <button id="startButton" onclick="startTimer()" class="timer-button">Start</button>
+            <button id="startButton" onclick="handleTimerButton()" class="timer-button">Start</button>
             <button onclick="resetTimer()" class="timer-button reset">Reset</button>
         </div>
     </div>
 
     <script>
-        let timerInterval;
-        let isRunning = false;
+        // Global variables for timer state
+        let timerInterval = null;
+        let remainingSeconds = 0;
+        let isPaused = false;
+        let timerStarted = false;
+
+        // DOM elements
+        const title = document.getElementById('title'); 
         const startButton = document.getElementById('startButton');
         const timerControls = document.getElementById('timerControls');
         const timerDisplay = document.getElementById('timer');
-        
-        // Hide timer at start
-        timerDisplay.classList.add('hidden');
-        
-        function startTimer() {
-            const minutes = parseInt(document.getElementById('minutes').value) || 0;
-            const seconds = parseInt(document.getElementById('seconds').value) || 0;
-            
-            if (minutes === 0 && seconds === 0) return;
-            
-            if (isRunning) {
-                clearInterval(timerInterval);
-                startButton.textContent = 'Resume';
-                isRunning = false;
-                return;
+        const minutesInput = document.getElementById('minutes');
+        const secondsInput = document.getElementById('seconds');
+
+        // Main timer control function
+        function handleTimerButton() {
+            if (!timerStarted) {
+                // Start a new timer
+                console.log('Starting new timer...');
+
+                startNewTimer();
+            } else if (isPaused) {
+                console.log('Resuming timer...');
+
+                // Resume paused timer
+                resumeTimer();
+            } else {
+                console.log('Pausing timer...');
+                // Pause running timer
+                pauseTimer();
             }
-            
-            let totalSeconds = (minutes * 60) + seconds;
-            
-            // Hide input controls and show timer
+        }
+
+        // Start a new timer
+        function startNewTimer() {
+            const minutes = parseInt(minutesInput.value) || 0;
+            const seconds = parseInt(secondsInput.value) || 0;
+
+            // Don't start if no time entered
+            if (minutes === 0 && seconds === 0) return;
+
+            // Set initial time
+            remainingSeconds = (minutes * 60) + seconds;
+
+            // Update UI
             timerControls.classList.add('hidden');
+            title.classList.add('hidden');
             timerDisplay.classList.remove('hidden');
-            
-            // Update display immediately before starting the interval
-            updateTimerDisplay(totalSeconds);
-            
             startButton.textContent = 'Pause';
-            isRunning = true;
-            
+
+            // Start timer
+            updateTimerDisplay();
+            startTimerInterval();
+
+            // Update state
+            timerStarted = true;
+            isPaused = false;
+        }
+
+        // Pause the timer
+        function pauseTimer() {
             clearInterval(timerInterval);
+            timerInterval = null;
+            startButton.textContent = 'Resume';
+            isPaused = true;
+        }
+
+        // Resume the timer
+        function resumeTimer() {
+            startButton.textContent = 'Pause';
+            startTimerInterval();
+            isPaused = false;
+        }
+
+        // Set up the interval for counting down
+        function startTimerInterval() {
             timerInterval = setInterval(() => {
-                if (totalSeconds <= 0) {
-                    timerEnded();
-                } else {
-                    totalSeconds--;
-                    updateTimerDisplay(totalSeconds);
+                remainingSeconds--;
+                updateTimerDisplay();
+
+                if (remainingSeconds <= 0) {
+                    timerComplete();
                 }
             }, 1000);
         }
-        
-        function timerEnded() {
+
+        // Update the timer display
+        function updateTimerDisplay() {
+            const mins = Math.floor(remainingSeconds / 60);
+            const secs = remainingSeconds % 60;
+            timerDisplay.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // Handle timer completion
+        function timerComplete() {
             clearInterval(timerInterval);
+            timerInterval = null;
+
+            // Reset state
+            timerStarted = false;
+            isPaused = false;
+
+            // Update UI
             startButton.textContent = 'Start';
-            isRunning = false;
-            
-            // Show input controls again and hide timer
             timerControls.classList.remove('hidden');
+            title.classList.remove('hidden');
             timerDisplay.classList.add('hidden');
-            
-            // Alert when timer ends
+
+            // Notify user
             setTimeout(() => {
                 alert('Meditation session completed!');
             }, 500);
         }
-        
-        function updateTimerDisplay(totalSeconds) {
-            const mins = Math.floor(totalSeconds / 60);
-            const secs = totalSeconds % 60;
-            document.getElementById('timer').textContent = 
-                `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-        }
-        
+
+        // Reset the timer completely
         function resetTimer() {
+            // Clear any running interval
             clearInterval(timerInterval);
-            document.getElementById('minutes').value = '';
-            document.getElementById('seconds').value = '';
-            document.getElementById('timer').textContent = '00:00';
+            timerInterval = null;
+
+            // Reset state
+            timerStarted = false;
+            isPaused = false;
+            remainingSeconds = 0;
+
+            // Reset UI
+            minutesInput.value = '';
+            secondsInput.value = '';
             startButton.textContent = 'Start';
-            isRunning = false;
-            
-            // Show input controls again and hide timer
+            timerDisplay.textContent = '00:00';
             timerControls.classList.remove('hidden');
             timerDisplay.classList.add('hidden');
+            title.classList.remove('hidden');
         }
     </script>
 </body>
