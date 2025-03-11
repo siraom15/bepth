@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        .timer-container {
+            position: absolute;
+            top: 963px;
+            left: 67px;
+            width: 268px;
+            height: 162px;
+            background-color: rgb(255, 255, 255);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 16px;
+            padding: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .timer-display {
+            font-size: 3em;
+            font-weight: 300;
+            color: #424242;
+            margin-bottom: 12px;
+            letter-spacing: 2px;
+            transition: opacity 0.3s ease, height 0.3s ease, margin 0.3s ease;
+            opacity: 1;
+            height: auto;
+            overflow: hidden;
+        }
+
+        .timer-display.hidden {
+            opacity: 0;
+            height: 0;
+            margin: 0;
+        }
+
+        .timer-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+            transition: opacity 0.3s ease, height 0.3s ease;
+            opacity: 1;
+            height: auto;
+            overflow: hidden;
+        }
+
+        .timer-controls.hidden {
+            opacity: 0;
+            height: 0;
+            margin: 0;
+        }
+
+        .hidden {
+            opacity: 0;
+            height: 0;
+            margin: 0;
+        }
+
+        .timer-input {
+            width: 60px;
+            height: 36px;
+            text-align: center;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            color: #424242;
+            padding: 0 4px;
+            background-color: #f5f5f5;
+        }
+
+        .timer-input:focus {
+            outline: none;
+            border-color: #fd8e07d4;
+        }
+
+        .timer-separator {
+            font-size: 24px;
+            color: #9E9E9E;
+            margin: 0 2px;
+        }
+
+        .timer-button {
+            background-color: #fd8f07;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 24px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .timer-button:hover {
+            background-color: #fd8e07df;
+        }
+
+        .timer-button.reset {
+            background-color: transparent;
+            color: #9E9E9E;
+            padding: 10px 16px;
+            font-size: 14px;
+            border: 1px solid #E0E0E0;
+            margin-left: 8px;
+        }
+
+        .timer-button.reset:hover {
+            background-color: #F5F5F5;
+        }
+        .text-orange {
+            color: #fd8f07;
+        }
+    </style>
+</head>
+
+<body>
+    <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+        viewBox="0 0 402 1252">
+        <image width="402" height="1252" xlink:href="TH Meditate.svg"></image>
+        <!-- Nav -->
+        <a xlink:href="TH Menu.html">
+            <rect x="34" y="89" fill="#fff" opacity="0" width="40" height="28"></rect>
+        </a>
+        <a xlink:href="TH Homepage.html">
+            <rect x="157" y="60" fill="#fff" opacity="0" width="87" height="87"></rect>
+        </a>
+        <a xlink:href="TH Homepage.html">
+            <rect x="327" y="86" fill="#fff" opacity="0" width="40" height="28"></rect>
+        </a>
+        <!-- End Nav -->
+        <!-- cont -->
+        <a xlink:href="Meditation.html">
+            <rect x="28" y="700" fill="#fff" opacity="0" width="77" height="28"></rect>
+        </a>
+    </svg>
+
+    <div class="timer-container">
+        <p class="text-orange" id="title">Please Input the time to Start</p>
+
+        <div id="timer" class="timer-display hidden">00:00</div>
+        <div id="timerControls" class="timer-controls">
+            <input type="number" id="minutes" class="timer-input" placeholder="00" min="0" max="59">
+            <span class="timer-separator">:</span>
+            <input type="number" id="seconds" class="timer-input" placeholder="00" min="0" max="59">
+        </div>
+        <div>
+            <button id="startButton" onclick="handleTimerButton()" class="timer-button">Start</button>
+            <button onclick="resetTimer()" class="timer-button reset">Reset</button>
+        </div>
+    </div>
+
+    <script>
+        // Global variables for timer state
+        let timerInterval = null;
+        let remainingSeconds = 0;
+        let isPaused = false;
+        let timerStarted = false;
+
+        // DOM elements
+        const title = document.getElementById('title'); 
+        const startButton = document.getElementById('startButton');
+        const timerControls = document.getElementById('timerControls');
+        const timerDisplay = document.getElementById('timer');
+        const minutesInput = document.getElementById('minutes');
+        const secondsInput = document.getElementById('seconds');
+
+        // Main timer control function
+        function handleTimerButton() {
+            if (!timerStarted) {
+                // Start a new timer
+                console.log('Starting new timer...');
+
+                startNewTimer();
+            } else if (isPaused) {
+                console.log('Resuming timer...');
+
+                // Resume paused timer
+                resumeTimer();
+            } else {
+                console.log('Pausing timer...');
+                // Pause running timer
+                pauseTimer();
+            }
+        }
+
+        // Start a new timer
+        function startNewTimer() {
+            const minutes = parseInt(minutesInput.value) || 0;
+            const seconds = parseInt(secondsInput.value) || 0;
+
+            // Don't start if no time entered
+            if (minutes === 0 && seconds === 0) return;
+
+            // Set initial time
+            remainingSeconds = (minutes * 60) + seconds;
+
+            // Update UI
+            timerControls.classList.add('hidden');
+            title.classList.add('hidden');
+            timerDisplay.classList.remove('hidden');
+            startButton.textContent = 'Pause';
+
+            // Start timer
+            updateTimerDisplay();
+            startTimerInterval();
+
+            // Update state
+            timerStarted = true;
+            isPaused = false;
+        }
+
+        // Pause the timer
+        function pauseTimer() {
+            clearInterval(timerInterval);
+            timerInterval = null;
+            startButton.textContent = 'Resume';
+            isPaused = true;
+        }
+
+        // Resume the timer
+        function resumeTimer() {
+            startButton.textContent = 'Pause';
+            startTimerInterval();
+            isPaused = false;
+        }
+
+        // Set up the interval for counting down
+        function startTimerInterval() {
+            timerInterval = setInterval(() => {
+                remainingSeconds--;
+                updateTimerDisplay();
+
+                if (remainingSeconds <= 0) {
+                    timerComplete();
+                }
+            }, 1000);
+        }
+
+        // Update the timer display
+        function updateTimerDisplay() {
+            const mins = Math.floor(remainingSeconds / 60);
+            const secs = remainingSeconds % 60;
+            timerDisplay.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // Handle timer completion
+        function timerComplete() {
+            clearInterval(timerInterval);
+            timerInterval = null;
+
+            // Reset state
+            timerStarted = false;
+            isPaused = false;
+
+            // Update UI
+            startButton.textContent = 'Start';
+            timerControls.classList.remove('hidden');
+            title.classList.remove('hidden');
+            timerDisplay.classList.add('hidden');
+
+            // Notify user
+            setTimeout(() => {
+                alert('Meditation session completed!');
+            }, 500);
+        }
+
+        // Reset the timer completely
+        function resetTimer() {
+            // Clear any running interval
+            clearInterval(timerInterval);
+            timerInterval = null;
+
+            // Reset state
+            timerStarted = false;
+            isPaused = false;
+            remainingSeconds = 0;
+
+            // Reset UI
+            minutesInput.value = '';
+            secondsInput.value = '';
+            startButton.textContent = 'Start';
+            timerDisplay.textContent = '00:00';
+            timerControls.classList.remove('hidden');
+            timerDisplay.classList.add('hidden');
+            title.classList.remove('hidden');
+        }
+    </script>
+</body>
+
+</html>
